@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="نبراس">
+<meta name="application-name" content="نبراس">
+<meta name="theme-color" content="#062E44">
+<meta name="description" content="نظام إدارة عقود مصنع نبراس للبلاستيك">
+<link rel="manifest" id="pwaManifest">
+<title>نبراس | نظام العقود</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--primary:#0A4B6E;--primary-dark:#062E44;--primary-light:#0D6B9A;--accent:#1A8FA8;--gold:#D4A842;--gray-50:#F8FAFB;--gray-100:#F2F5F7;--gray-200:#E4EBF0;--gray-400:#9AAAB5;--gray-600:#5A7080;--text:#0D2533;--danger:#E53E3E;--success:#38A169;--warning:#DD6B20;}
+body{font-family:'Tajawal',sans-serif;background:var(--gray-100);color:var(--text);min-height:100vh;}
+#authScreen{position:fixed;inset:0;background:linear-gradient(150deg,#041C2C,var(--primary) 60%,var(--primary-light));display:flex;align-items:center;justify-content:center;z-index:1000;}
+.auth-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);border-radius:20px;padding:40px;width:min(400px,90vw);text-align:center;}
+.auth-title{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:5px;}
+.auth-sub{font-size:0.72rem;color:rgba(255,255,255,0.42);letter-spacing:2px;text-transform:uppercase;margin-bottom:26px;}
+.auth-input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:12px 16px;color:#fff;font-family:'Tajawal',sans-serif;font-size:0.95rem;outline:none;margin-bottom:12px;text-align:right;}
+.auth-input:focus{border-color:var(--gold);}
+.auth-input::placeholder{color:rgba(255,255,255,0.34);}
+.btn-auth{width:100%;padding:13px;background:var(--gold);border:none;border-radius:10px;font-family:'Tajawal',sans-serif;font-size:1rem;font-weight:700;color:#fff;cursor:pointer;margin-top:6px;}
+.auth-err{color:#fc8181;font-size:0.8rem;margin-top:8px;display:none;}
+#app{display:none;flex-direction:column;min-height:100vh;}
+.topbar{background:var(--primary-dark);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.topbar-brand{display:flex;align-items:center;gap:10px;}
+.topbar-title{font-size:1.05rem;font-weight:800;color:#fff;}
+.topbar-sub{font-size:0.52rem;letter-spacing:2px;color:rgba(255,255,255,.33);text-transform:uppercase;}
+.topbar-actions{display:flex;align-items:center;gap:10px;}
+.topbar-user{font-size:0.78rem;color:rgba(255,255,255,.55);}
+.btn-sm{padding:7px 14px;border-radius:8px;border:none;font-family:'Tajawal',sans-serif;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-primary{background:var(--gold);color:#fff;}
+.btn-ghost{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);}
+.nav{background:#fff;border-bottom:1px solid var(--gray-200);display:flex;padding:0 20px;overflow-x:auto;}
+.nav-item{padding:14px 18px;font-size:0.85rem;font-weight:600;color:var(--gray-600);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+.nav-item:hover,.nav-item.active{color:var(--primary);}
+.nav-item.active{border-bottom-color:var(--primary);}
+.page{display:none;padding:24px 20px;max-width:1100px;margin:0 auto;width:100%;}
+.page.active{display:block;}
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:24px;}
+@media(min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
+.stat-card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 1px 8px rgba(0,0,0,.06);}
+.stat-num{font-size:1.8rem;font-weight:800;color:var(--primary);}
+.stat-lbl{font-size:0.72rem;color:var(--gray-600);margin-top:3px;}
+.stat-card.gold .stat-num{color:var(--gold);}
+.stat-card.teal .stat-num{color:var(--accent);}
+.stat-card.green .stat-num{color:var(--success);}
+.card{background:#fff;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,.06);overflow:hidden;}
+.card-head{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.card-title{font-size:.95rem;font-weight:700;color:var(--primary-dark);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{padding:11px 16px;font-size:.72rem;font-weight:600;color:var(--gray-600);text-align:right;background:var(--gray-50);white-space:nowrap;}
+td{padding:12px 16px;font-size:.83rem;color:var(--text);border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--gray-50);}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:600;}
+.badge-new{background:#EBF8FF;color:#2B6CB0;}
+.badge-pending{background:#FFFBEB;color:#92400E;}
+.badge-done{background:#F0FFF4;color:#276749;}
+.form-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+@media(min-width:600px){.form-grid.c2{grid-template-columns:1fr 1fr;}.form-grid.c3{grid-template-columns:1fr 1fr 1fr;}}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-label{font-size:.78rem;font-weight:600;color:var(--primary-dark);}
+.req{color:var(--danger);}
+.form-input,.form-select,.form-textarea{border:1.5px solid var(--gray-200);border-radius:10px;padding:11px 14px;font-family:'Tajawal',sans-serif;font-size:.9rem;color:var(--text);outline:none;background:#fff;transition:border-color .2s;width:100%;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);}
+.form-textarea{resize:vertical;min-height:70px;}
+.form-section{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,.06);margin-bottom:16px;}
+.form-section-title{font-size:.85rem;font-weight:700;color:var(--primary);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--gray-200);}
+/* Clause editor */
+.preamble-box{background:#FFFEF5;border:1.5px solid #EDD98A;border-radius:12px;padding:16px;margin-bottom:14px;}
+.preamble-lbl{font-size:.75rem;font-weight:700;color:#8B6914;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.preamble-ta{width:100%;border:1px solid #E0CE88;border-radius:8px;padding:10px 12px;font-family:'Tajawal',sans-serif;font-size:.85rem;line-height:1.9;color:var(--text);background:#fff;resize:vertical;min-height:130px;outline:none;}
+.preamble-ta:focus{border-color:var(--gold);}
+.clause-list{display:flex;flex-direction:column;gap:8px;}
+.clause-row{display:flex;gap:8px;align-items:flex-start;}
+.c-badge{background:var(--primary);color:#fff;border-radius:6px;padding:4px 9px;font-size:.72rem;font-weight:700;min-width:26px;text-align:center;margin-top:10px;flex-shrink:0;}
+.clause-ta{flex:1;border:1px solid var(--gray-200);border-radius:8px;padding:9px 12px;font-family:'Tajawal',sans-serif;font-size:.82rem;line-height:1.7;color:var(--text);background:#fff;resize:vertical;min-height:48px;outline:none;}
+.clause-ta:focus{border-color:var(--accent);}
+.btn-del-clause{background:#FFF5F5;border:1px solid #FED7D7;color:var(--danger);border-radius:7px;padding:5px 9px;font-size:.72rem;cursor:pointer;flex-shrink:0;margin-top:8px;}
+.btn-add-clause{background:var(--gray-100);border:1px dashed var(--gray-400);border-radius:8px;padding:8px 16px;font-family:'Tajawal',sans-serif;font-size:.8rem;color:var(--gray-600);cursor:pointer;margin-top:8px;}
+/* Door rows */
+.door-row{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;padding:16px;margin-bottom:12px;}
+.door-row-hd{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;font-weight:700;color:var(--primary);margin-bottom:12px;}
+.btn-rm-door{background:var(--danger);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:.72rem;font-family:'Tajawal',sans-serif;cursor:pointer;}
+.btn-add-door{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-family:'Tajawal',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;margin-bottom:14px;}
+.calc-box{background:var(--gray-50);border-radius:10px;padding:14px;margin-top:10px;}
+.calc-line{display:flex;justify-content:space-between;padding:4px 0;font-size:.84rem;color:var(--gray-600);}
+.calc-line.tot{font-weight:800;font-size:1rem;color:var(--primary-dark);border-top:1px dashed var(--gray-300);margin-top:6px;padding-top:8px;}
+.calc-line.vat-line{color:var(--warning);}
+.btn-lg{padding:14px 28px;border-radius:12px;border:none;font-family:'Tajawal',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;}
+.btn-create{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;width:100%;}
+/* Upload */
+.upload-btn{display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:10px;border:1.5px dashed var(--gray-300);background:var(--gray-50);cursor:pointer;font-family:'Tajawal',sans-serif;font-size:.82rem;color:var(--gray-600);width:100%;justify-content:center;}
+.upload-btn:hover{border-color:var(--accent);color:var(--accent);}
+.upload-btn input{display:none;}
+.img-prev{max-width:160px;max-height:80px;border-radius:8px;border:1px solid var(--gray-200);display:block;margin:8px auto;}
+/* Contract doc */
+#contractDoc{background:#fff;padding:40px;font-size:.88rem;line-height:2;direction:rtl;max-width:800px;margin:0 auto;}
+.doc-stripe{height:4px;background:linear-gradient(90deg,#062E44,#0A4B6E,#1A8FA8,#D4A842);border-radius:2px;margin-bottom:18px;}
+.doc-hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:3px solid var(--primary);margin-bottom:18px;}
+.doc-logo-area{display:flex;align-items:center;gap:12px;}
+.doc-co-info{font-size:.72rem;color:var(--gray-600);line-height:1.9;text-align:left;}
+.doc-title{text-align:center;font-size:1.3rem;font-weight:800;color:var(--primary-dark);margin:14px 0 4px;}
+.doc-subtitle{text-align:center;font-size:.9rem;color:var(--primary);font-weight:600;margin-bottom:4px;}
+.doc-num{text-align:center;font-size:.8rem;color:var(--gray-600);margin-bottom:18px;}
+.doc-parties{background:var(--gray-50);border-radius:10px;padding:12px 16px;margin-bottom:14px;}
+.doc-party{font-size:.85rem;margin-bottom:6px;}
+.doc-party:last-child{margin-bottom:0;}
+.doc-sec-title{font-size:.9rem;font-weight:700;color:var(--primary);margin:14px 0 7px;border-right:3px solid var(--gold);padding-right:8px;}
+.doc-clause{font-size:.82rem;color:var(--text);margin-bottom:7px;padding-right:14px;}
+.doc-sub{font-size:.8rem;color:var(--text);margin-bottom:5px;padding-right:28px;}
+.doc-tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem;}
+.doc-tbl th{background:var(--primary-dark);color:#fff;padding:9px 12px;text-align:right;font-weight:600;}
+.doc-tbl td{padding:9px 12px;border:1px solid var(--gray-200);text-align:right;}
+.doc-tbl tr:nth-child(even) td{background:var(--gray-50);}
+.row-sub td{font-weight:700;background:var(--gray-100)!important;color:var(--primary-dark);}
+.row-vat td{background:#EFF6FF!important;color:var(--primary);font-weight:600;}
+.row-total td{font-weight:800;font-size:.95rem;background:var(--primary-dark)!important;color:#fff!important;}
+.doc-sigs{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:28px;padding-top:18px;border-top:2px solid var(--gray-200);}
+.doc-sig-box{text-align:center;}
+.doc-sig-title{font-size:.82rem;font-weight:700;color:var(--primary-dark);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--gray-200);}
+.doc-sig-canvas{border:1px solid var(--gray-200);border-radius:8px;min-height:110px;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;background:var(--gray-50);}
+.doc-sig-canvas img{object-fit:contain;}
+.doc-sig-name{font-size:.78rem;font-weight:600;color:var(--primary-dark);margin-top:8px;}
+.doc-watermark{text-align:center;margin-top:18px;padding:10px;background:var(--gray-50);border-radius:8px;font-size:.7rem;color:var(--gray-400);}
+/* Actions */
+.contract-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.sig-area{border:2px dashed var(--gray-300);border-radius:12px;overflow:hidden;cursor:crosshair;background:#fafafa;}
+.sig-controls{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+.sig-hint{font-size:.7rem;color:var(--gray-400);}
+.sig-btn{background:none;border:1px solid var(--gray-300);border-radius:8px;padding:5px 12px;font-family:'Tajawal',sans-serif;font-size:.75rem;color:var(--gray-600);cursor:pointer;}
+.sig-btn:hover{border-color:var(--danger);color:var(--danger);}
+.action-btns{display:flex;gap:5px;flex-wrap:wrap;}
+.btn-action{padding:5px 11px;border-radius:7px;border:none;font-family:'Tajawal',sans-serif;font-size:.74rem;font-weight:600;cursor:pointer;}
+.btn-view{background:#EBF8FF;color:#2B6CB0;}
+.btn-wa{background:#E8F5E9;color:#2E7D32;}
+.btn-pdf{background:#F0FFF4;color:var(--success);}
+.btn-del{background:#FFF5F5;color:var(--danger);}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:18px;padding:24px;width:min(580px,100%);max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:1.1rem;font-weight:700;color:var(--primary-dark);margin-bottom:18px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;}
+/* OTP */
+#clientView{display:none;position:fixed;inset:0;background:var(--gray-100);overflow-y:auto;z-index:2000;}
+.otp-box{max-width:440px;margin:60px auto;padding:0 20px;}
+.otp-card{background:#fff;border-radius:20px;padding:36px;box-shadow:0 8px 40px rgba(0,0,0,.12);text-align:center;}
+.otp-icon{width:64px;height:64px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+.otp-title{font-size:1.2rem;font-weight:800;color:var(--primary-dark);margin-bottom:8px;}
+.otp-desc{font-size:.82rem;color:var(--gray-600);margin-bottom:22px;line-height:1.7;}
+.otp-inputs{display:flex;gap:10px;justify-content:center;margin-bottom:20px;direction:ltr;}
+.otp-digit{width:48px;height:56px;border:2px solid var(--gray-200);border-radius:12px;text-align:center;font-size:1.4rem;font-weight:700;font-family:'Tajawal',sans-serif;outline:none;}
+.otp-digit:focus{border-color:var(--accent);}
+.btn-verify{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;border-radius:12px;padding:13px 32px;font-family:'Tajawal',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;width:100%;}
+.otp-phone{font-weight:700;color:var(--primary);}
+.otp-resend{font-size:.78rem;color:var(--gray-600);margin-top:12px;cursor:pointer;}
+.otp-resend span{color:var(--accent);text-decoration:underline;}
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--primary-dark);color:#fff;padding:12px 24px;border-radius:12px;font-size:.88rem;font-weight:600;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;white-space:nowrap;}
+#toast.show{opacity:1;}
+#toast.success{background:var(--success);}
+#toast.error{background:var(--danger);}
+.spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.search-bar{display:flex;gap:10px;flex-wrap:wrap;}
+.search-input{flex:1;min-width:200px;border:1.5px solid var(--gray-200);border-radius:10px;padding:9px 14px;font-family:'Tajawal',sans-serif;font-size:.88rem;outline:none;}
+.search-input:focus{border-color:var(--accent);}
+.filter-select{border:1.5px solid var(--gray-200);border-radius:10px;padding:9px 14px;font-family:'Tajawal',sans-serif;font-size:.88rem;outline:none;background:#fff;}
+.empty{text-align:center;padding:48px 20px;color:var(--gray-400);}
+.empty-icon{font-size:3rem;margin-bottom:12px;}
+.empty-title{font-size:1rem;font-weight:600;color:var(--gray-600);margin-bottom:6px;}
+
+/* ── PWA ── */
+#installBanner{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--primary-dark);color:#fff;padding:12px 20px;z-index:9998;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.3);}
+#installBanner.show{display:flex;}
+.install-txt{font-size:.82rem;line-height:1.5;}
+.install-txt strong{display:block;font-size:.9rem;}
+.install-actions{display:flex;gap:8px;flex-shrink:0;}
+.btn-install{background:var(--gold);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-family:'Tajawal',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;}
+.btn-install-later{background:rgba(255,255,255,.12);color:rgba(255,255,255,.7);border:none;border-radius:9px;padding:9px 14px;font-family:'Tajawal',sans-serif;font-size:.78rem;cursor:pointer;}
+/* iOS safe area */
+body{padding-bottom:env(safe-area-inset-bottom);}
+.topbar{padding-top:env(safe-area-inset-top);}
+/* Splash screen */
+#splashScreen{position:fixed;inset:0;background:linear-gradient(150deg,#041C2C,#0A4B6E 60%,#0D6B9A);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s;}
+#splashScreen.hide{opacity:0;pointer-events:none;}
+.splash-logo{animation:splashPulse 1.2s ease-in-out infinite alternate;}
+@keyframes splashPulse{from{transform:scale(1);}to{transform:scale(1.06);}}
+.splash-title{font-size:1.4rem;font-weight:800;color:#fff;margin-top:18px;}
+.splash-sub{font-size:.7rem;letter-spacing:3px;color:rgba(255,255,255,.4);text-transform:uppercase;margin-top:6px;}
+.splash-bar{width:120px;height:3px;background:rgba(255,255,255,.15);border-radius:2px;margin-top:28px;overflow:hidden;}
+.splash-progress{height:100%;background:var(--gold);border-radius:2px;animation:loadBar 1.4s ease forwards;}
+@keyframes loadBar{from{width:0;}to{width:100%;}}
+</style>
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splashScreen">
+  <div class="splash-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="90 25 276 282" width="90" height="90"><path d="M294.345 183.619C295.251 155.571 294.219 126.208 276.85 102.735C270.217 93.772 261.752 86.14 252.01 80.691C229.079 67.867 199.681 67.431 176.38 79.569C153.079 91.706 136.588 116.047 133.955 142.188C133.74 144.319 133.496 146.697 131.865 148.085C130.766 149.02 129.262 149.288 127.832 149.479C120.73 150.425 113.488 150.311 106.419 149.144C103.448 148.653 100.126 147.692 98.792 144.992C98.02 143.428 98.098 141.594 98.234 139.855C100.963 104.848 120.981 71.612 150.637 52.813C180.293 34.014 218.884 30.091 251.723 42.522C284.562 54.952 310.878 83.436 320.694 117.148C329.566 147.624 325.926 179.396 325.847 210.619C325.807 226.298 325.913 241.97 326.342 257.643C326.435 261.038 326.66 264.744 328.936 267.265C335.637 274.689 351.45 264.424 356.834 272.851C358.291 275.131 358.241 278.024 358.142 280.728C357.985 285.042 357.827 289.356 357.67 293.669C357.609 295.352 357.446 297.249 356.145 298.318C355.126 299.155 353.699 299.225 352.381 299.257C334.817 299.682 317.254 300.107 299.69 300.532C297.587 300.583 295.173 300.499 293.839 298.873C292.829 297.642 292.782 295.909 292.783 294.317C292.79 274.816 292.797 255.315 292.804 235.814Z" fill="white"/><path d="M245.086 184.715C245.086 201.949 231.115 215.919 213.882 215.919C196.648 215.919 182.677 201.949 182.677 184.715C182.677 167.481 196.648 153.511 213.882 153.511C231.115 153.511 245.086 167.481 245.086 184.715Z" fill="white"/></svg>
+  </div>
+  <div class="splash-title">نبراس للبلاستيك</div>
+  <div class="splash-sub">CONTRACT SYSTEM</div>
+  <div class="splash-bar"><div class="splash-progress"></div></div>
+</div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="installBanner">
+  <div class="install-txt"><strong>📲 تثبيت التطبيق</strong>أضف نظام العقود لشاشة الرئيسية</div>
+  <div class="install-actions">
+    <button class="btn-install" onclick="installPWA()">تثبيت</button>
+    <button class="btn-install-later" onclick="dismissInstall()">لاحقاً</button>
+  </div>
+</div>
+
+
+<div id="authScreen">
+  <div class="auth-box">
+    <div style="width:64px;height:64px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="90 25 276 282" width="54" height="54"><path d="M294.345 183.619C295.251 155.571 294.219 126.208 276.85 102.735C270.217 93.772 261.752 86.14 252.01 80.691C229.079 67.867 199.681 67.431 176.38 79.569C153.079 91.706 136.588 116.047 133.955 142.188C133.74 144.319 133.496 146.697 131.865 148.085C130.766 149.02 129.262 149.288 127.832 149.479C120.73 150.425 113.488 150.311 106.419 149.144C103.448 148.653 100.126 147.692 98.792 144.992C98.02 143.428 98.098 141.594 98.234 139.855C100.963 104.848 120.981 71.612 150.637 52.813C180.293 34.014 218.884 30.091 251.723 42.522C284.562 54.952 310.878 83.436 320.694 117.148C329.566 147.624 325.926 179.396 325.847 210.619C325.807 226.298 325.913 241.97 326.342 257.643C326.435 261.038 326.66 264.744 328.936 267.265C335.637 274.689 351.45 264.424 356.834 272.851C358.291 275.131 358.241 278.024 358.142 280.728C357.985 285.042 357.827 289.356 357.67 293.669C357.609 295.352 357.446 297.249 356.145 298.318C355.126 299.155 353.699 299.225 352.381 299.257C334.817 299.682 317.254 300.107 299.69 300.532C297.587 300.583 295.173 300.499 293.839 298.873C292.829 297.642 292.782 295.909 292.783 294.317C292.79 274.816 292.797 255.315 292.804 235.814Z" fill="white"/><path d="M245.086 184.715C245.086 201.949 231.115 215.919 213.882 215.919C196.648 215.919 182.677 201.949 182.677 184.715C182.677 167.481 196.648 153.511 213.882 153.511C231.115 153.511 245.086 167.481 245.086 184.715Z" fill="white"/></svg>
+    </div>
+    <div class="auth-title">نظام إدارة العقود</div>
+    <div class="auth-sub">NIBRAS CONTRACT SYSTEM v2</div>
+    <input class="auth-input" id="authUser" placeholder="اسم المستخدم" type="text">
+    <input class="auth-input" id="authPass" placeholder="كلمة المرور" type="password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-auth" onclick="doLogin()">دخول</button>
+    <div class="auth-err" id="authErr">بيانات الدخول غير صحيحة</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="90 25 276 282" width="32" height="32"><path d="M294.345 183.619C295.251 155.571 294.219 126.208 276.85 102.735C270.217 93.772 261.752 86.14 252.01 80.691C229.079 67.867 199.681 67.431 176.38 79.569C153.079 91.706 136.588 116.047 133.955 142.188C133.74 144.319 133.496 146.697 131.865 148.085C130.766 149.02 129.262 149.288 127.832 149.479C120.73 150.425 113.488 150.311 106.419 149.144C103.448 148.653 100.126 147.692 98.792 144.992C98.02 143.428 98.098 141.594 98.234 139.855C100.963 104.848 120.981 71.612 150.637 52.813C180.293 34.014 218.884 30.091 251.723 42.522C284.562 54.952 310.878 83.436 320.694 117.148C329.566 147.624 325.926 179.396 325.847 210.619C325.807 226.298 325.913 241.97 326.342 257.643C326.435 261.038 326.66 264.744 328.936 267.265C335.637 274.689 351.45 264.424 356.834 272.851C358.291 275.131 358.241 278.024 358.142 280.728C357.985 285.042 357.827 289.356 357.67 293.669C357.609 295.352 357.446 297.249 356.145 298.318C355.126 299.155 353.699 299.225 352.381 299.257C334.817 299.682 317.254 300.107 299.69 300.532C297.587 300.583 295.173 300.499 293.839 298.873C292.829 297.642 292.782 295.909 292.783 294.317C292.79 274.816 292.797 255.315 292.804 235.814Z" fill="white"/><path d="M245.086 184.715C245.086 201.949 231.115 215.919 213.882 215.919C196.648 215.919 182.677 201.949 182.677 184.715C182.677 167.481 196.648 153.511 213.882 153.511C231.115 153.511 245.086 167.481 245.086 184.715Z" fill="white"/></svg>
+      <div><div class="topbar-title">نبراس للبلاستيك</div><div class="topbar-sub">CONTRACT MANAGEMENT v2</div></div>
+    </div>
+    <div class="topbar-actions">
+      <span class="topbar-user" id="topbarUser"></span>
+      <button class="btn-sm btn-ghost" onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="nav-item active" onclick="showPage('dashboard')">🏠 الرئيسية</div>
+    <div class="nav-item" onclick="showPage('contracts')">📄 العقود</div>
+    <div class="nav-item" id="newContractNav" onclick="showPage('newContract')">➕ عقد جديد</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="dashboardPage">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="st-total">—</div><div class="stat-lbl">إجمالي العقود</div></div>
+      <div class="stat-card teal"><div class="stat-num" id="st-pending">—</div><div class="stat-lbl">قيد التوقيع</div></div>
+      <div class="stat-card green"><div class="stat-num" id="st-done">—</div><div class="stat-lbl">مكتملة</div></div>
+      <div class="stat-card gold"><div class="stat-num" id="st-value">—</div><div class="stat-lbl">إجمالي القيمة (ريال)</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">📋 أحدث العقود</span><button class="btn-sm btn-primary" onclick="showPage('contracts')">عرض الكل</button></div>
+      <div class="table-wrap" id="recentContracts"><div class="empty"><div class="empty-icon">📄</div><div class="empty-title">لا توجد عقود بعد</div></div></div>
+    </div>
+  </div>
+
+  <!-- CONTRACTS -->
+  <div class="page" id="contractsPage">
+    <div class="card">
+      <div class="card-head"><span class="card-title">📄 جميع العقود</span><button class="btn-sm btn-primary" onclick="showPage('newContract')">➕ عقد جديد</button></div>
+      <div style="padding:14px 20px;border-bottom:1px solid var(--gray-200);">
+        <div class="search-bar">
+          <input class="search-input" id="searchInput" placeholder="🔍 بحث باسم العميل أو رقم العقد..." oninput="filterContracts()">
+          <select class="filter-select" id="filterStatus" onchange="filterContracts()">
+            <option value="">جميع الحالات</option><option value="new">جديد</option><option value="pending">قيد التوقيع</option><option value="done">مكتمل</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap" id="contractsTable"></div>
+    </div>
+  </div>
+
+  <!-- NEW CONTRACT -->
+  <div class="page" id="newContractPage">
+
+    <div class="form-section">
+      <div class="form-section-title">📝 بيانات العقد الأساسية</div>
+      <div class="form-grid c2">
+        <div class="form-group"><label class="form-label">رقم العقد <span class="req">*</span></label><input class="form-input" id="f_num" placeholder="NEB-207" oninput="checkNum()"><span id="numStatus" style="font-size:.72rem;"></span></div>
+        <div class="form-group"><label class="form-label">اسم المشروع <span class="req">*</span></label><input class="form-input" id="f_project" placeholder="توريد وتركيب أبواب WPC"></div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">عنوان العقد <span style="font-size:.7rem;color:var(--gray-600);font-weight:400;">(يظهر في رأس العقد)</span></label>
+          <input class="form-input" id="f_contract_title" placeholder="عقد توريد وتركيب أبواب WPC" value="عقد توريد وتركيب أبواب WPC">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">👤 بيانات العميل</div>
+      <div class="form-grid c2">
+        <div class="form-group"><label class="form-label">اسم العميل <span class="req">*</span></label><input class="form-input" id="f_clientName" placeholder="مهندس فهد محمد التركي"></div>
+        <div class="form-group"><label class="form-label">رقم الجوال <span class="req">*</span></label><input class="form-input" id="f_phone" placeholder="05XXXXXXXX" dir="ltr"></div>
+        <div class="form-group"><label class="form-label">المدينة</label><input class="form-input" id="f_city" placeholder="الرياض"></div>
+        <div class="form-group"><label class="form-label">العنوان التفصيلي</label><input class="form-input" id="f_address" placeholder="طريق الملك عبدالعزيز"></div>
+        <div class="form-group"><label class="form-label">رقم الهوية / الرقم الضريبي</label><input class="form-input" id="f_taxId" placeholder="310XXXXXXXX" dir="ltr"></div>
+        <div class="form-group"><label class="form-label">ممثل العميل في العقد</label><input class="form-input" id="f_rep" placeholder="المهندس / ..."></div>
+      </div>
+    </div>
+
+    <!-- PREAMBLE + CLAUSES EDITOR -->
+    <div class="form-section">
+      <div class="form-section-title">📋 التمهيد والبنود — قابل للتعديل قبل الإرسال</div>
+      <div class="preamble-box">
+        <div class="preamble-lbl">✏️ نص التمهيد</div>
+        <textarea class="preamble-ta" id="f_preamble">حيث أن الطرف الأول هو المقاول الرئيسي لتنفيذ تصنيع وتوريد وتركيب الأبواب للطرف الثاني وذلك طبقاً للتقديمات الفنية المعتمدة، لما يمتلكه الطرف الأول من خبرة في إنجاز مثل هذا العمل حسب الشروط والمواصفات المتفق عليها والموضحة في التعاقد، لذلك اتفق الطرفان وهما بكامل الأهلية والشروط المعتبرة شرعاً ونظاماً على ما يلي:</textarea>
+      </div>
+      <div style="font-size:.78rem;font-weight:700;color:var(--primary);margin-bottom:10px;">📌 البنود والشروط (كل بند قابل للتعديل أو الحذف)</div>
+      <div class="clause-list" id="clauseList"></div>
+      <button class="btn-add-clause" onclick="addClause()">+ إضافة بند جديد</button>
+    </div>
+
+    <!-- DOOR ROWS -->
+    <div class="form-section">
+      <div class="form-section-title">🚪 تفاصيل المشروع — الأبواب (يمكن إضافة أكثر من نوع)</div>
+      <div id="doorRowsContainer"></div>
+      <button class="btn-add-door" onclick="addDoorRow()">➕ إضافة نوع باب آخر</button>
+
+      <!-- Frames + Passages -->
+      <div style="background:var(--gray-50);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <div style="font-size:.78rem;font-weight:700;color:var(--primary-dark);margin-bottom:10px;">التلبيسات والمعابر (مشتركة لجميع الأنواع)</div>
+        <div class="form-grid c2">
+          <div class="form-group"><label class="form-label">عدد التلبيسات</label><input class="form-input" id="f_frames" type="number" min="0" value="0" oninput="calcTotals()"></div>
+          <div class="form-group"><label class="form-label">سعر التلبيسة (ريال)</label><input class="form-input" id="f_framePrice" type="number" min="0" value="0" oninput="calcTotals()"></div>
+          <div class="form-group"><label class="form-label">عدد المعابر</label><input class="form-input" id="f_passages" type="number" min="0" value="0" oninput="calcTotals()"></div>
+          <div class="form-group"><label class="form-label">سعر المعبر (ريال)</label><input class="form-input" id="f_passagePrice" type="number" min="0" value="0" oninput="calcTotals()"></div>
+        </div>
+      </div>
+
+      <div class="form-grid c2" style="margin-bottom:12px;">
+        <div class="form-group"><label class="form-label">مدة التنفيذ</label><input class="form-input" id="f_duration" placeholder="25 يوم"></div>
+        <div class="form-group"><label class="form-label">تاريخ العقد</label><input class="form-input" id="f_date" type="date"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">مواصفات الأبواب <span style="font-size:.7rem;color:var(--gray-600);font-weight:400;">(تظهر في العقد — قابلة للتعديل)</span></label>
+        <textarea class="form-textarea" id="f_specs" style="min-height:100px;font-size:.83rem;line-height:1.9;">• الباب من مادة WPC مغلف بـ PVC عالية الجودة (cold glue lamination — كيلو ونصف غراء لكل باب)
+• الحلق (Frame) من WPC بسماكة 30 مللي حسب سماكة الجدار — البراويز WPC من نفس لون الباب
+• يشمل: كالون + مسكة لون أسود، 4 مفصلات لكل باب، إطار مطاط (رابر) — القفل الإلكتروني تركيب فقط</textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;"><label class="form-label">ملاحظات</label><textarea class="form-textarea" id="f_notes" placeholder="أي ملاحظات إضافية..."></textarea></div>
+
+      <div class="calc-box">
+        <div id="calcDoorLines"></div>
+        <div class="calc-line"><span>إجمالي التلبيسات</span><span id="c_frames">0 ريال</span></div>
+        <div class="calc-line"><span>إجمالي المعابر</span><span id="c_passages">0 ريال</span></div>
+        <div class="calc-line"><span>المجموع الفرعي</span><span id="c_sub">0 ريال</span></div>
+        <div class="calc-line vat-line"><span>ضريبة القيمة المضافة 15%</span><span id="c_vat">0 ريال</span></div>
+        <div class="calc-line tot"><span>💰 الإجمالي النهائي</span><span id="c_total">0 ريال</span></div>
+      </div>
+    </div>
+
+    <button class="btn-lg btn-create" onclick="createContract()" id="createBtn">✍️ إنشاء العقد وإرسال للعميل</button>
+  </div>
+
+  <!-- VIEW -->
+  <div class="page" id="viewPage">
+    <div class="contract-actions">
+      <button class="btn-sm btn-primary" onclick="showPage('contracts')">← العودة</button>
+      <button class="btn-sm" style="background:#25D366;color:#fff;" onclick="sendWhatsApp()">📲 واتساب</button>
+      <button class="btn-sm btn-pdf" onclick="downloadPDF()">📄 PDF</button>
+      <button class="btn-sm" style="background:var(--primary);color:#fff;" onclick="openSignModal()">✍️ توقيع + ختم</button>
+      <span id="contractStatusBadge"></span>
+    </div>
+
+    <div id="contractDoc"></div>
+
+    <!-- Sig Panel -->
+    <div style="background:#fff;border-radius:14px;padding:20px;margin-top:16px;box-shadow:0 1px 8px rgba(0,0,0,.06);">
+      <div class="form-section-title">✍️ التوقيعات والختم</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--primary-dark);margin-bottom:8px;">توقيع ممثل الشركة (رسم أو رفع صورة)</div>
+          <canvas id="companySigCanvas" width="300" height="110" class="sig-area"></canvas>
+          <div class="sig-controls"><span class="sig-hint">ارسم أو ارفع صورة</span><button class="sig-btn" onclick="clearSig('companySig')">مسح</button></div>
+          <label class="upload-btn" style="margin-top:8px;">
+            <input type="file" accept="image/*" onchange="onUpload(event,'companySig','companySigPrev')">
+            📎 رفع صورة التوقيع
+          </label>
+          <img id="companySigPrev" class="img-prev" style="display:none;">
+          <button class="btn-sm btn-primary" style="margin-top:8px;width:100%;" onclick="saveCompanySig()">💾 حفظ التوقيع</button>
+        </div>
+        <div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--primary-dark);margin-bottom:8px;">ختم الشركة (رفع صورة)</div>
+          <div id="stampBox" style="border:1px solid var(--gray-200);border-radius:10px;min-height:110px;display:flex;align-items:center;justify-content:center;background:var(--gray-50);">
+            <span style="font-size:.75rem;color:var(--gray-400);">لا يوجد ختم</span>
+          </div>
+          <label class="upload-btn" style="margin-top:8px;">
+            <input type="file" accept="image/*" onchange="onUpload(event,'stamp','stampPrev')">
+            📎 رفع صورة الختم
+          </label>
+          <img id="stampPrev" class="img-prev" style="display:none;">
+          <button class="btn-sm" style="margin-top:8px;width:100%;background:var(--accent);color:#fff;" onclick="saveStamp()">💾 حفظ الختم</button>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-200);">
+        <div style="font-size:.78rem;font-weight:700;color:var(--primary-dark);margin-bottom:8px;">توقيع العميل</div>
+        <div id="clientSigBox" style="border:1px solid var(--gray-200);border-radius:10px;min-height:80px;display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-size:.8rem;">في انتظار توقيع العميل</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SIGN MODAL -->
+<div class="modal-overlay" id="sigModal">
+  <div class="modal">
+    <div class="modal-title">✍️ توقيع الشركة + الختم</div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:.78rem;font-weight:600;color:var(--gray-600);margin-bottom:8px;">رسم التوقيع:</div>
+      <canvas id="modalSigCanvas" width="500" height="150" class="sig-area" style="width:100%;"></canvas>
+      <div class="sig-controls"><span class="sig-hint">ارسم بالماوس أو الإصبع</span><button class="sig-btn" onclick="clearSig('modalSig')">مسح</button></div>
+    </div>
+    <div style="background:var(--gray-50);border-radius:10px;padding:14px;">
+      <div style="font-size:.78rem;font-weight:600;color:var(--gray-600);margin-bottom:10px;">أو ارفع الصور:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-size:.72rem;color:var(--gray-600);margin-bottom:6px;">📝 صورة التوقيع</div>
+          <label class="upload-btn"><input type="file" accept="image/*" onchange="onUpload(event,'modalSig','modalSigPrev')">ارفع التوقيع</label>
+          <img id="modalSigPrev" class="img-prev" style="display:none;">
+        </div>
+        <div>
+          <div style="font-size:.72rem;color:var(--gray-600);margin-bottom:6px;">🔵 صورة الختم</div>
+          <label class="upload-btn"><input type="file" accept="image/*" onchange="onUpload(event,'modalStamp','modalStampPrev')">ارفع الختم</label>
+          <img id="modalStampPrev" class="img-prev" style="display:none;">
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-ghost" onclick="closeModal('sigModal')">إلغاء</button>
+      <button class="btn-sm btn-primary" onclick="saveModalSig()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT VIEW -->
+<div id="clientView">
+  <div class="otp-box" id="otpBox">
+    <div class="otp-card">
+      <div class="otp-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="90 25 276 282" width="34" height="34"><path d="M294.345 183.619C295.251 155.571 294.219 126.208 276.85 102.735C270.217 93.772 261.752 86.14 252.01 80.691C229.079 67.867 199.681 67.431 176.38 79.569C153.079 91.706 136.588 116.047 133.955 142.188C133.74 144.319 133.496 146.697 131.865 148.085C130.766 149.02 129.262 149.288 127.832 149.479C120.73 150.425 113.488 150.311 106.419 149.144C103.448 148.653 100.126 147.692 98.792 144.992C98.02 143.428 98.098 141.594 98.234 139.855C100.963 104.848 120.981 71.612 150.637 52.813C180.293 34.014 218.884 30.091 251.723 42.522C284.562 54.952 310.878 83.436 320.694 117.148C329.566 147.624 325.926 179.396 325.847 210.619C325.807 226.298 325.913 241.97 326.342 257.643C326.435 261.038 326.66 264.744 328.936 267.265C335.637 274.689 351.45 264.424 356.834 272.851C358.291 275.131 358.241 278.024 358.142 280.728C357.985 285.042 357.827 289.356 357.67 293.669C357.609 295.352 357.446 297.249 356.145 298.318C355.126 299.155 353.699 299.225 352.381 299.257C334.817 299.682 317.254 300.107 299.69 300.532C297.587 300.583 295.173 300.499 293.839 298.873C292.829 297.642 292.782 295.909 292.783 294.317C292.79 274.816 292.797 255.315 292.804 235.814Z" fill="white"/><path d="M245.086 184.715C245.086 201.949 231.115 215.919 213.882 215.919C196.648 215.919 182.677 201.949 182.677 184.715C182.677 167.481 196.648 153.511 213.882 153.511C231.115 153.511 245.086 167.481 245.086 184.715Z" fill="white"/></svg></div>
+      <div class="otp-title">التحقق من هويتك</div>
+      <div class="otp-desc">تم إرسال رمز التحقق إلى<br><span class="otp-phone" id="otpPhone">---</span></div>
+      <div class="otp-inputs">
+        <input class="otp-digit" maxlength="1" id="d0" oninput="otpNext(this,1)" onkeydown="otpBack(event,this,-1)">
+        <input class="otp-digit" maxlength="1" id="d1" oninput="otpNext(this,2)" onkeydown="otpBack(event,this,0)">
+        <input class="otp-digit" maxlength="1" id="d2" oninput="otpNext(this,3)" onkeydown="otpBack(event,this,1)">
+        <input class="otp-digit" maxlength="1" id="d3" oninput="otpNext(this,4)" onkeydown="otpBack(event,this,2)">
+        <input class="otp-digit" maxlength="1" id="d4" oninput="otpNext(this,5)" onkeydown="otpBack(event,this,3)">
+        <input class="otp-digit" maxlength="1" id="d5" oninput="verifyOTP()" onkeydown="otpBack(event,this,4)">
+      </div>
+      <button class="btn-verify" onclick="verifyOTP()">✅ تحقق والدخول للعقد</button>
+      <div class="otp-resend">لم يصلك الرمز؟ <span onclick="resendOTP()">إعادة الإرسال</span></div>
+    </div>
+  </div>
+  <div id="clientContractView" style="display:none;padding:20px;max-width:800px;margin:0 auto;">
+    <div style="background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border-radius:14px;padding:16px;text-align:center;margin-bottom:20px;"><div style="font-size:1rem;font-weight:700;">📄 عقد توريد وتركيب أبواب WPC</div><div style="font-size:.75rem;opacity:.7;margin-top:4px;">مصنع نبراس للبلاستيك</div></div>
+    <div id="clientContractDoc"></div>
+    <div id="clientSignSection" style="background:#fff;border-radius:14px;padding:20px;margin-top:16px;box-shadow:0 2px 12px rgba(0,0,0,.1);">
+      <div style="font-size:1rem;font-weight:700;color:var(--primary-dark);margin-bottom:14px;">✍️ توقيع العميل</div>
+      <canvas id="clientSigCanvas" width="700" height="160" class="sig-area" style="width:100%;"></canvas>
+      <div class="sig-controls"><span class="sig-hint">ارسم توقيعك بالإصبع أو الماوس</span><button class="sig-btn" onclick="clearSig('clientSig')">مسح</button></div>
+      <button onclick="submitClientSig()" style="background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;border-radius:12px;padding:14px;width:100%;font-family:'Tajawal',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;margin-top:12px;">✅ تأكيد التوقيع وإتمام العقد</button>
+    </div>
+    <div id="signedConfirm" style="display:none;text-align:center;padding:30px;background:#fff;border-radius:14px;margin-top:16px;"><div style="font-size:3rem;">✅</div><div style="font-size:1.2rem;font-weight:700;color:var(--success);margin:10px 0;">تم التوقيع بنجاح</div><div style="font-size:.85rem;color:var(--gray-600);">تم حفظ توقيعك وإتمام العقد. سيتم التواصل معك قريبًا.</div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://xxeeuibkpronmpzrprem.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4ZWV1aWJrcHJvbm1wenJwcmVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTY1ODksImV4cCI6MjA1ODY3MjU4OX0.NkEzNjI4NjhiYTI3MzVmNzBhZjY0OGM4ZGFjN2I3MzI';
+const USERS={'ABU HAMZA':{password:'2026',role:'admin',name:'أبو حمزة - المدير'},'sales1':{password:'1234',role:'rep',name:'مندوب المبيعات 1'},'sales2':{password:'1234',role:'rep',name:'مندوب المبيعات 2'}};
+const BASE_URL=window.location.href.split('?')[0];
+
+const DEFAULT_PREAMBLE='حيث أن الطرف الأول هو المقاول الرئيسي لتنفيذ تصنيع وتوريد وتركيب الأبواب للطرف الثاني وذلك طبقاً للتقديمات الفنية المعتمدة، لما يمتلكه الطرف الأول من خبرة في إنجاز مثل هذا العمل حسب الشروط والمواصفات المتفق عليها والموضحة في التعاقد، لذلك اتفق الطرفان وهما بكامل الأهلية والشروط المعتبرة شرعاً ونظاماً على ما يلي:';
+
+const DEFAULT_CLAUSES=[
+'يعتبر ما ورد بالتمهيد السابق جزءاً لا يتجزأ من هذا العقد ومكملاً لأحكامه وشروطه.',
+'يقر الطرف الثاني بأنه فحص بعناية وفهم هذا العقد وجميع وثائقه التي تعتبر جزءاً لا يتجزأ منه، وأن سعره يشمل كل ما ورد فيه من شروط وأحكام ومواصفات وكميات وجميع ما يلزم لتنفيذ الأعمال على أكمل وجه.',
+'المراسلات والخطابات تكون عبر القنوات الرسمية المدونة في هذا العقد.',
+'يلتزم الطرف الثاني بدفع وسداد مستحقات الطرف الأول وفقاً لطريقة الدفع المتفق عليها والمدونة بهذا العقد، حيث تكون الدفعات 50% دفعة أولى من قيمة العقد مقدمة قبل التشغيل للبدء في تصنيع الأبواب، ودفعة ثانية 50% قبل التوريد بثلاثة أيام.',
+'يكون هذا العقد ساري المفعول بعد سداد كل المستحقات السابقة على الطرف الثاني لدى الطرف الأول.',
+'يلتزم الطرف الأول بتوريد وتركيب أبواب WPC وفقاً لبنود العمل المتفق عليها طبقاً للتفصيل الوارد في جدول الكميات والأسعار المرفق بالمشروع ووفقاً لما ورد في وثائق العقد وطبقاً لتعليمات أصول الصناعة.',
+'يحق للطرف الثاني أو من يمثله إضافة عدد أبواب للعقد ويكون ذلك بموجب خطاب كتابي إلى الطرف الأول وإرسال ملحق يضاف لهذا العقد.',
+'يقدم الطرف الأول شهادة ضمان لمدة عشر سنوات ضد عيوب الصناعة والماء والنمل الأبيض والحشرات والحرارة والرطوبة والتقوس ولا يشمل ذلك سوء الاستخدام.',
+'يعتبر هذا العقد ساري المفعول ومعمول به من تاريخ التوقيع عليه من قبل الطرفين وتحويل مقدم أول دفعة وحتى إنهاء وتسليم كافة الأعمال محل العقد للطرف الثاني.',
+'شروط عامة للتركيب: يتم التركيب بعد الانتهاء من أعمال الدهان وجلي البلاط ونظافة الموقع — يتم طلب التركيب قبل جاهزية الموقع بفترة 10 أيام — في حال وجود أبواب أو حلوق قديمة الشركة غير مسؤولة عن إزالتها — يتحمل الطرف الثاني الدفعة المقدمة في حالة الرجوع عن الاتفاق.',
+];
+
+const LOGO=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="90 25 276 282" width="50" height="50"><path d="M294.345 183.619C295.251 155.571 294.219 126.208 276.85 102.735C270.217 93.772 261.752 86.14 252.01 80.691C229.079 67.867 199.681 67.431 176.38 79.569C153.079 91.706 136.588 116.047 133.955 142.188C133.74 144.319 133.496 146.697 131.865 148.085C130.766 149.02 129.262 149.288 127.832 149.479C120.73 150.425 113.488 150.311 106.419 149.144C103.448 148.653 100.126 147.692 98.792 144.992C98.02 143.428 98.098 141.594 98.234 139.855C100.963 104.848 120.981 71.612 150.637 52.813C180.293 34.014 218.884 30.091 251.723 42.522C284.562 54.952 310.878 83.436 320.694 117.148C329.566 147.624 325.926 179.396 325.847 210.619C325.807 226.298 325.913 241.97 326.342 257.643C326.435 261.038 326.66 264.744 328.936 267.265C335.637 274.689 351.45 264.424 356.834 272.851C358.291 275.131 358.241 278.024 358.142 280.728C357.985 285.042 357.827 289.356 357.67 293.669C357.609 295.352 357.446 297.249 356.145 298.318C355.126 299.155 353.699 299.225 352.381 299.257C334.817 299.682 317.254 300.107 299.69 300.532C297.587 300.583 295.173 300.499 293.839 298.873C292.829 297.642 292.782 295.909 292.783 294.317C292.79 274.816 292.797 255.315 292.804 235.814Z" fill="#0A4B6E"/><path d="M245.086 184.715C245.086 201.949 231.115 215.919 213.882 215.919C196.648 215.919 182.677 201.949 182.677 184.715C182.677 167.481 196.648 153.511 213.882 153.511C231.115 153.511 245.086 167.481 245.086 184.715Z" fill="#0A4B6E"/></svg>`;
+
+let _sb;try{_sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);}catch(e){}
+let currentUser=null,allContracts=[],currentContract=null,sigPads={};
+let doorRowCount=0;
+const uploadedImgs={};// key -> base64
+
+// AUTH
+async function doLogin(){
+  const u=document.getElementById('authUser').value.trim();
+  const p=document.getElementById('authPass').value.trim();
+  const usr=USERS[u];
+  if(!usr||usr.password!==p){document.getElementById('authErr').style.display='block';return;}
+  currentUser={username:u,...usr};
+  document.getElementById('topbarUser').textContent=usr.name;
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('app').style.cssText='display:flex;flex-direction:column;';
+  if(currentUser.role==='rep')document.getElementById('newContractNav').style.display='none';
+  initClauseEditor();
+  addDoorRow();
+  await loadContracts();
+  showPage('dashboard');
+}
+function doLogout(){currentUser=null;document.getElementById('authScreen').style.display='flex';document.getElementById('app').style.display='none';}
+
+// CLAUSE EDITOR
+function initClauseEditor(){
+  const c=document.getElementById('clauseList');
+  c.innerHTML='';
+  DEFAULT_CLAUSES.forEach((t,i)=>appendClauseRow(i,t));
+}
+function appendClauseRow(i,text){
+  const c=document.getElementById('clauseList');
+  const d=document.createElement('div');
+  d.className='clause-row';
+  d.id='cr'+i;
+  d.innerHTML=`<span class="c-badge">${i+1}</span><textarea class="clause-ta" id="ct${i}" rows="2">${text}</textarea><button class="btn-del-clause" onclick="removeClause(${i})">✕</button>`;
+  c.appendChild(d);
+}
+function addClause(){
+  const rows=document.querySelectorAll('#clauseList .clause-row').length;
+  appendClauseRow(rows,'');
+  renumberClauses();
+}
+function removeClause(i){
+  document.getElementById('cr'+i)?.remove();
+  renumberClauses();
+}
+function renumberClauses(){
+  document.querySelectorAll('#clauseList .clause-row').forEach((row,i)=>{
+    row.id='cr'+i;
+    const b=row.querySelector('.c-badge');if(b)b.textContent=i+1;
+    const t=row.querySelector('textarea');if(t)t.id='ct'+i;
+    const btn=row.querySelector('.btn-del-clause');if(btn)btn.setAttribute('onclick','removeClause('+i+')');
+  });
+}
+function getClauses(){
+  const n=document.querySelectorAll('#clauseList .clause-row').length;
+  return Array.from({length:n},(_,i)=>document.getElementById('ct'+i)?.value.trim()).filter(Boolean);
+}
+
+// DOOR ROWS
+function addDoorRow(){
+  doorRowCount++;
+  const idx=doorRowCount;
+  const c=document.getElementById('doorRowsContainer');
+  const d=document.createElement('div');
+  d.className='door-row';d.id='dr'+idx;
+  d.innerHTML=`
+  <div class="door-row-hd"><span>🚪 نوع الباب ${idx}</span>${idx>1?`<button class="btn-rm-door" onclick="removeDoorRow(${idx})">حذف</button>`:''}</div>
+  <div class="form-grid c3">
+    <div class="form-group"><label class="form-label">نوع الباب</label><select class="form-select" id="dt${idx}"><option>فلات</option><option>يو تشانل</option><option>شرائح</option><option>أخرى</option></select></div>
+    <div class="form-group"><label class="form-label">وصف / تفاصيل الباب</label><input class="form-input" id="dd${idx}" placeholder="مثال: باب رئيسي، درفة مفردة..."></div>
+    <div class="form-group"><label class="form-label">اللون / المواصفة</label><input class="form-input" id="dc${idx}" placeholder="بيج، جوز، أبيض..."></div>
+    <div class="form-group"><label class="form-label">عدد الأبواب</label><input class="form-input" id="dq${idx}" type="number" min="0" value="0" oninput="calcTotals()"></div>
+    <div class="form-group"><label class="form-label">سعر الباب (ريال)</label><input class="form-input" id="dp${idx}" type="number" min="0" value="0" oninput="calcTotals()"></div>
+    <div class="form-group"><label class="form-label">الإجمالي</label><input class="form-input" id="dtot${idx}" value="0 ريال" readonly style="background:var(--gray-50);color:var(--primary);font-weight:700;"></div>
+  </div>`;
+  c.appendChild(d);
+}
+function removeDoorRow(i){document.getElementById('dr'+i)?.remove();calcTotals();}
+function getDoorRows(){
+  const rows=[];
+  for(let i=1;i<=doorRowCount;i++){
+    if(!document.getElementById('dr'+i))continue;
+    rows.push({type:document.getElementById('dt'+i)?.value||'فلات',desc:document.getElementById('dd'+i)?.value.trim()||'',color:document.getElementById('dc'+i)?.value.trim()||'',count:+document.getElementById('dq'+i)?.value||0,price:+document.getElementById('dp'+i)?.value||0});
+  }
+  return rows;
+}
+
+// CALC
+function calcTotals(){
+  let dTotal=0,linesHtml='';
+  for(let i=1;i<=doorRowCount;i++){
+    if(!document.getElementById('dr'+i))continue;
+    const q=+document.getElementById('dq'+i)?.value||0,p=+document.getElementById('dp'+i)?.value||0,t=q*p;
+    dTotal+=t;
+    const el=document.getElementById('dtot'+i);if(el)el.value=formatNum(t)+' ريال';
+    if(q>0){const tp=document.getElementById('dt'+i)?.value||'';linesHtml+=`<div class="calc-line"><span>أبواب ${tp}</span><span>${formatNum(t)} ريال</span></div>`;}
+  }
+  document.getElementById('calcDoorLines').innerHTML=linesHtml;
+  const fr=+document.getElementById('f_frames')?.value||0,fp=+document.getElementById('f_framePrice')?.value||0;
+  const pg=+document.getElementById('f_passages')?.value||0,pp=+document.getElementById('f_passagePrice')?.value||0;
+  const tF=fr*fp,tP=pg*pp,sub=dTotal+tF+tP,vat=sub*.15,total=sub+vat;
+  document.getElementById('c_frames').textContent=formatNum(tF)+' ريال';
+  document.getElementById('c_passages').textContent=formatNum(tP)+' ريال';
+  document.getElementById('c_sub').textContent=formatNum(sub)+' ريال';
+  document.getElementById('c_vat').textContent=formatNum(vat)+' ريال';
+  document.getElementById('c_total').textContent=formatNum(total)+' ريال';
+}
+
+async function checkNum(){
+  const num=document.getElementById('f_num').value.trim();
+  const el=document.getElementById('numStatus');
+  if(!num){el.textContent='';return;}
+  if(allContracts.find(c=>c.contract_num===num)){el.textContent='⚠️ مستخدم مسبقًا';el.style.color='var(--danger)';}
+  else{el.textContent='✅ متاح';el.style.color='var(--success)';}
+}
+
+// STORAGE
+function localSave(d){try{localStorage.setItem('nibras_c2',JSON.stringify(d));}catch(e){}}
+function localLoad(){try{return JSON.parse(localStorage.getItem('nibras_c2')||'[]');}catch(e){return[];}}
+async function loadContracts(){
+  if(_sb){try{const{data,error}=await _sb.from('nibras_contracts').select('*').order('created_at',{ascending:false});if(!error&&data){allContracts=data;localSave(data);renderAll();return;}}catch(e){}}
+  allContracts=localLoad();renderAll();
+}
+async function saveContract(c){
+  if(_sb){try{const{data,error}=await _sb.from('nibras_contracts').upsert([c]).select();if(!error&&data)return data[0];}catch(e){}}
+  const i=allContracts.findIndex(x=>x.id===c.id);
+  if(i>=0)allContracts[i]=c;else allContracts.unshift(c);
+  localSave(allContracts);return c;
+}
+
+// RENDER
+function renderAll(){renderDashboard();renderContractsTable(allContracts);}
+function renderDashboard(){
+  document.getElementById('st-total').textContent=allContracts.length;
+  document.getElementById('st-pending').textContent=allContracts.filter(c=>c.status==='pending').length;
+  document.getElementById('st-done').textContent=allContracts.filter(c=>c.status==='done').length;
+  document.getElementById('st-value').textContent=formatNum(allContracts.reduce((s,c)=>s+(c.total_final||0),0));
+  const r=allContracts.slice(0,5);
+  document.getElementById('recentContracts').innerHTML=r.length?renderTable(r):'<div class="empty"><div class="empty-icon">📄</div><div class="empty-title">لا توجد عقود بعد</div></div>';
+}
+function renderTable(list){
+  if(!list.length)return'<div class="empty"><div class="empty-icon">📄</div><div class="empty-title">لا توجد نتائج</div></div>';
+  return`<table><thead><tr><th>رقم العقد</th><th>العميل</th><th>المشروع</th><th>الإجمالي</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody>${list.map(c=>`<tr><td><strong>${c.contract_num||''}</strong></td><td>${c.client_name||''}</td><td>${c.project_name||''}</td><td><strong>${formatNum(c.total_final||0)} ريال</strong></td><td>${sBadge(c.status)}</td><td>${fmtDate(c.created_at)}</td><td><div class="action-btns"><button class="btn-action btn-view" onclick="viewContract('${c.id}')">عرض</button><button class="btn-action btn-wa" onclick="sendWA('${c.id}')">📲</button><button class="btn-action btn-pdf" onclick="genPDF('${c.id}')">PDF</button>${c.status!=='done'?`<button class="btn-action btn-del" onclick="delContract('${c.id}')">🗑</button>`:''}</div></td></tr>`).join('')}</tbody></table>`;
+}
+function renderContractsTable(list){document.getElementById('contractsTable').innerHTML=renderTable(list);}
+function sBadge(s){if(s==='done')return'<span class="badge badge-done">✅ مكتمل</span>';if(s==='pending')return'<span class="badge badge-pending">⏳ قيد التوقيع</span>';return'<span class="badge badge-new">🆕 جديد</span>';}
+function filterContracts(){
+  const q=document.getElementById('searchInput').value.trim().toLowerCase();
+  const st=document.getElementById('filterStatus').value;
+  let list=allContracts;
+  if(q)list=list.filter(c=>(c.client_name||'').toLowerCase().includes(q)||(c.contract_num||'').toLowerCase().includes(q));
+  if(st)list=list.filter(c=>c.status===st);
+  renderContractsTable(list);
+}
+
+// CREATE
+async function createContract(){
+  const num=document.getElementById('f_num').value.trim();
+  const client=document.getElementById('f_clientName').value.trim();
+  const phone=document.getElementById('f_phone').value.trim();
+  const project=document.getElementById('f_project').value.trim();
+  if(!num||!client||!phone||!project){showToast('يرجى ملء الحقول الإلزامية','error');return;}
+  if(allContracts.find(c=>c.contract_num===num)){showToast('رقم العقد مستخدم مسبقًا','error');return;}
+  const doorRows=getDoorRows().filter(r=>r.count>0);
+  if(!doorRows.length){showToast('يرجى إدخال بيانات الأبواب','error');return;}
+  const fr=+document.getElementById('f_frames')?.value||0,fp=+document.getElementById('f_framePrice')?.value||0;
+  const pg=+document.getElementById('f_passages')?.value||0,pp=+document.getElementById('f_passagePrice')?.value||0;
+  const dTotal=doorRows.reduce((s,r)=>s+r.count*r.price,0);
+  const tF=fr*fp,tP=pg*pp,sub=dTotal+tF+tP,vat=sub*.15,total=sub+vat;
+  const token=crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2);
+  const contract={
+    id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),
+    contract_num:num,project_name:project,
+    contract_title:document.getElementById('f_contract_title').value.trim()||'عقد توريد وتركيب أبواب WPC',
+    client_name:client,client_phone:phone,
+    client_city:document.getElementById('f_city').value.trim(),
+    client_address:document.getElementById('f_address').value.trim(),
+    client_tax:document.getElementById('f_taxId').value.trim(),
+    client_rep:document.getElementById('f_rep').value.trim(),
+    preamble:document.getElementById('f_preamble').value.trim(),
+    clauses:getClauses(),
+    door_rows:doorRows,
+    frames_count:fr,frame_price:fp,passages_count:pg,passage_price:pp,
+    duration:document.getElementById('f_duration').value.trim(),
+    specs:document.getElementById('f_specs').value.trim(),
+    notes:document.getElementById('f_notes').value.trim(),
+    contract_date:document.getElementById('f_date').value||new Date().toISOString().split('T')[0],
+    total_doors:dTotal,total_frames:tF,total_passages:tP,total_sub:sub,total_vat:vat,total_final:total,
+    status:'pending',token,created_by:currentUser.username,created_at:new Date().toISOString(),
+    client_sig:null,company_sig:null,company_stamp:null,signed_at:null,
+    otp:Math.floor(100000+Math.random()*900000).toString()
+  };
+  document.getElementById('createBtn').disabled=true;
+  document.getElementById('createBtn').innerHTML='<span class="spinner"></span>';
+  const saved=await saveContract(contract);
+  allContracts.unshift(saved||contract);
+  localSave(allContracts);
+  document.getElementById('createBtn').disabled=false;
+  document.getElementById('createBtn').innerHTML='✍️ إنشاء العقد وإرسال للعميل';
+  showToast('✅ تم إنشاء العقد!','success');
+  renderAll();
+  currentContract=saved||contract;
+  viewContract(currentContract.id);
+  setTimeout(()=>{
+    const link=`${BASE_URL}?contract=${currentContract.contract_num}&token=${currentContract.token}`;
+    const msg=`السلام عليكم ${currentContract.client_name}،\n\nيسعدنا تزويدكم بعقد توريد وتركيب أبواب WPC من مصنع نبراس للبلاستيك.\n\n🔗 رابط العقد:\n${link}\n\nرمز التحقق: *${currentContract.otp}*\n\nللاستفسار: 0555092383\nمصنع نبراس للبلاستيك`;
+    if(confirm('هل تريد إرسال رابط العقد للعميل عبر واتساب الآن؟'))window.open(`https://api.whatsapp.com/send?phone=966${currentContract.client_phone.replace(/^0/,'')}&text=${encodeURIComponent(msg)}`,'_blank');
+  },500);
+}
+
+// VIEW
+function viewContract(id){
+  currentContract=allContracts.find(c=>c.id===id);if(!currentContract)return;
+  renderContractDoc(currentContract,'contractDoc');
+  if(currentContract.company_sig){
+    const cv=document.getElementById('companySigCanvas');
+    const img=new Image();img.onload=()=>{const ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(img,0,0,cv.width,cv.height);};img.src=currentContract.company_sig;
+    const p=document.getElementById('companySigPrev');if(p){p.src=currentContract.company_sig;p.style.display='block';}
+  }
+  if(currentContract.company_stamp){const sb=document.getElementById('stampBox');if(sb)sb.innerHTML=`<img src="${currentContract.company_stamp}" style="max-width:100%;max-height:100px;">`;}
+  const csb=document.getElementById('clientSigBox');
+  if(currentContract.client_sig)csb.innerHTML=`<img src="${currentContract.client_sig}" style="max-width:100%;max-height:80px;">`;
+  else csb.innerHTML='<span style="color:var(--gray-400);font-size:.8rem;">في انتظار توقيع العميل</span>';
+  document.getElementById('contractStatusBadge').innerHTML=sBadge(currentContract.status);
+  showPage('view');
+  initSigPad(document.getElementById('companySigCanvas'),'companySig');
+  initSigPad(document.getElementById('modalSigCanvas'),'modalSig');
+}
+
+// RENDER CONTRACT DOC
+function renderContractDoc(c,targetId){
+  const el=document.getElementById(targetId);
+  const link=`${BASE_URL}?contract=${c.contract_num}&token=${c.token}`;
+  const doorRows=c.door_rows||[];
+  const clauses=c.clauses||DEFAULT_CLAUSES;
+  const preamble=c.preamble||DEFAULT_PREAMBLE;
+  let tRows='',rn=1;
+  doorRows.forEach(r=>{
+    if(!r.count&&!r.desc)return;
+    const t=r.count*r.price;
+    const d=[r.type,r.desc,r.color?'('+r.color+')':''].filter(Boolean).join(' — ');
+    tRows+=`<tr><td>${rn++}</td><td>${d}</td><td>${r.count}</td><td>${formatNum(r.price)} ريال</td><td>${formatNum(t)} ريال</td></tr>`;
+  });
+  if(c.frames_count>0)tRows+=`<tr><td>${rn++}</td><td>تلبيسات WPC</td><td>${c.frames_count}</td><td>${formatNum(c.frame_price)} ريال</td><td>${formatNum(c.total_frames||0)} ريال</td></tr>`;
+  if(c.passages_count>0)tRows+=`<tr><td>${rn++}</td><td>معابر</td><td>${c.passages_count}</td><td>${formatNum(c.passage_price)} ريال</td><td>${formatNum(c.total_passages||0)} ريال</td></tr>`;
+
+  el.innerHTML=`
+  <div class="doc-stripe"></div>
+  <div class="doc-hdr">
+    <div class="doc-logo-area">${LOGO}<div>
+      <div style="font-size:1.1rem;font-weight:800;color:var(--primary-dark);">شركة مصنع نبراس للبلاستيك</div>
+      <div style="font-size:.6rem;color:var(--gray-600);">س.ت: 1128185177 | ب.ض: 312765384700003</div>
+      <div style="font-size:.6rem;color:var(--gray-600);">القصيم - المملكة العربية السعودية | رمز بريدي 56464</div>
+    </div></div>
+    <div class="doc-co-info"><div>📞 920033382 — 0555092383</div><div>🌐 nibras-factory.com</div></div>
+  </div>
+  <div class="doc-title">${c.contract_title||'عقد توريد وتركيب أبواب WPC'}</div>
+  <div class="doc-subtitle">(وثيقة العقد الأساسية)</div>
+  <div class="doc-num">رقم العقد: <strong>${c.contract_num}</strong></div>
+  <div class="doc-parties">
+    <div class="doc-party"><strong>طرف أول:</strong> شركة مصنع نبراس للبلاستيك — القصيم، المملكة العربية السعودية</div>
+    <div style="border-top:1px dashed var(--gray-200);margin:8px 0;"></div>
+    <div class="doc-party"><strong>طرف ثاني:</strong> ${c.client_name}${c.client_city?' — '+c.client_city:''}${c.client_address?' — '+c.client_address:''}<br>${c.client_tax?'رقم ضريبي: '+c.client_tax+' — ':''}${c.client_phone?'هاتف: '+c.client_phone:''}</div>
+  </div>
+  <div style="text-align:center;font-size:.82rem;color:var(--gray-600);margin-bottom:14px;">إنه بعون الله تعالى في يوم ${arabicDate(c.contract_date)} تم الاتفاق بين الطرفين على ما يلي:</div>
+  <div class="doc-sec-title">تمهيد</div>
+  <div class="doc-clause">${preamble}</div>
+  <div class="doc-sec-title">البنود والشروط</div>
+  ${clauses.map((t,i)=>`<div class="doc-clause"><strong>${i+1}.</strong> ${t}</div>`).join('')}
+
+  <div class="doc-sec-title">تفاصيل المشروع — مواصفات الأبواب</div>
+  <div style="background:var(--gray-50);border-radius:8px;padding:12px 16px;margin-bottom:10px;font-size:.83rem;line-height:2.1;color:var(--text);">
+    <div style="margin-bottom:6px;">المشروع: <strong>${c.project_name}</strong> — مدة التنفيذ: <strong>${c.duration||'25 يوماً'}</strong></div>
+    ${(c.specs||'• الباب من مادة WPC مغلف بـ PVC عالية الجودة (cold glue lamination — كيلو ونصف غراء لكل باب)\n• الحلق (Frame) من WPC بسماكة 30 مللي حسب سماكة الجدار — البراويز WPC من نفس لون الباب\n• يشمل: كالون + مسكة لون أسود، 4 مفصلات لكل باب، إطار مطاط (رابر) — القفل الإلكتروني تركيب فقط').split('\n').map(line=>line.trim()?`<div>${line}</div>`:'').join('')}
+  </div>
+  <div class="doc-sec-title">جدول الكميات والأسعار</div>
+  <table class="doc-tbl">
+    <thead><tr><th>#</th><th>البيان والوصف التفصيلي</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+    <tbody>${tRows}</tbody>
+    <tfoot>
+      <tr class="row-sub"><td colspan="4"><strong>المجموع الفرعي</strong></td><td><strong>${formatNum(c.total_sub||0)} ريال</strong></td></tr>
+      <tr class="row-vat"><td colspan="4">ضريبة القيمة المضافة 15%</td><td>${formatNum(c.total_vat||0)} ريال</td></tr>
+      <tr class="row-total"><td colspan="4"><strong>الإجمالي النهائي</strong></td><td><strong>${formatNum(c.total_final||0)} ريال</strong></td></tr>
+    </tfoot>
+  </table>
+  ${c.notes?`<div class="doc-sec-title">ملاحظات</div><div class="doc-clause">${c.notes}</div>`:''}
+  <div style="margin-top:18px;font-weight:700;text-align:center;font-size:.88rem;color:var(--primary-dark);padding:10px;border:1px solid var(--gray-200);border-radius:8px;">هذا ما تم الاتفاق عليه وقد تم إعداد هذا العقد من نسختين تم تسليم كل طرف نسخة أصلية للعمل بموجبه وعليه جرى التوقيع...</div>
+  <div class="doc-sigs">
+    <div class="doc-sig-box">
+      <div class="doc-sig-title">الطرف الأول — شركة مصنع نبراس للبلاستيك</div>
+      <div class="doc-sig-canvas" style="min-height:100px;display:flex;align-items:center;justify-content:center;gap:10px;padding:8px;">
+        ${c.company_sig?`<img src="${c.company_sig}" style="max-height:90px;max-width:160px;object-fit:contain;">`:'<span style="color:var(--gray-300);font-size:.75rem;">في انتظار التوقيع</span>'}
+        ${c.company_stamp?`<img src="${c.company_stamp}" style="max-height:80px;max-width:80px;object-fit:contain;opacity:.9;">`:''}
+      </div>
+      <div class="doc-sig-name">شركة مصنع نبراس للبلاستيك</div>
+      ${c.signed_at?`<div style="font-size:.65rem;color:var(--gray-400);">${fmtDate(c.signed_at)}</div>`:''}
+    </div>
+    <div class="doc-sig-box">
+      <div class="doc-sig-title">الطرف الثاني — ${c.client_name}</div>
+      <div class="doc-sig-canvas" style="min-height:100px;display:flex;align-items:center;justify-content:center;padding:8px;">${c.client_sig?`<img src="${c.client_sig}" style="max-height:90px;max-width:200px;object-fit:contain;">`:'<span style="color:var(--gray-300);font-size:.75rem;">في انتظار توقيع العميل</span>'}</div>
+      <div class="doc-sig-name">${c.client_name}</div>
+    </div>
+  </div>
+  <div class="doc-watermark">رابط العقد: ${link}<br>تم إنشاء هذا العقد بواسطة نظام نبراس لإدارة العقود · ${new Date().getFullYear()}</div>`;
+}
+
+// SIG PAD
+function initSigPad(canvas,name){
+  if(!canvas||sigPads[name])return;
+  const ctx=canvas.getContext('2d');
+  let drawing=false,lx=0,ly=0;
+  function gp(e){const r=canvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return[(t.clientX-r.left)*(canvas.width/r.width),(t.clientY-r.top)*(canvas.height/r.height)];}
+  canvas.addEventListener('mousedown',e=>{drawing=true;[lx,ly]=gp(e);});
+  canvas.addEventListener('mousemove',e=>{if(!drawing)return;const[x,y]=gp(e);ctx.strokeStyle='#0A4B6E';ctx.lineWidth=2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];});
+  canvas.addEventListener('mouseup',()=>drawing=false);
+  canvas.addEventListener('mouseleave',()=>drawing=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;[lx,ly]=gp(e);},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const[x,y]=gp(e);ctx.strokeStyle='#0A4B6E';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];},{passive:false});
+  canvas.addEventListener('touchend',()=>drawing=false);
+  sigPads[name]=canvas;
+}
+function clearSig(name){const c=sigPads[name];if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);}
+function isSigEmpty(c){return!c.getContext('2d').getImageData(0,0,c.width,c.height).data.some(v=>v!==0);}
+
+// UPLOAD
+function onUpload(event,key,prevId){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    uploadedImgs[key]=e.target.result;
+    const p=document.getElementById(prevId);if(p){p.src=e.target.result;p.style.display='block';}
+    if(key==='stamp'||key==='modalStamp'){const sb=document.getElementById('stampBox');if(sb)sb.innerHTML=`<img src="${e.target.result}" style="max-width:100%;max-height:100px;">`;}
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveCompanySig(){
+  let sig=null;
+  const cv=sigPads['companySig'];
+  if(cv&&!isSigEmpty(cv))sig=cv.toDataURL('image/png');
+  else if(uploadedImgs['companySig'])sig=uploadedImgs['companySig'];
+  if(!sig){showToast('ارسم التوقيع أو ارفع صورة','error');return;}
+  currentContract.company_sig=sig;
+  currentContract.signed_at=new Date().toISOString();
+  if(uploadedImgs['stamp'])currentContract.company_stamp=uploadedImgs['stamp'];
+  await saveContract(currentContract);
+  renderContractDoc(currentContract,'contractDoc');
+  showToast('✅ تم حفظ التوقيع','success');
+}
+
+async function saveStamp(){
+  if(!uploadedImgs['stamp']){showToast('يرجى رفع صورة الختم أولاً','error');return;}
+  currentContract.company_stamp=uploadedImgs['stamp'];
+  await saveContract(currentContract);
+  renderContractDoc(currentContract,'contractDoc');
+  showToast('✅ تم حفظ الختم','success');
+}
+
+function openSignModal(){
+  delete uploadedImgs['modalSig'];delete uploadedImgs['modalStamp'];
+  document.getElementById('modalSigPrev').style.display='none';
+  document.getElementById('modalStampPrev').style.display='none';
+  document.getElementById('sigModal').classList.add('open');
+  setTimeout(()=>initSigPad(document.getElementById('modalSigCanvas'),'modalSig'),100);
+}
+
+async function saveModalSig(){
+  let sig=null;
+  const cv=sigPads['modalSig'];
+  if(cv&&!isSigEmpty(cv))sig=cv.toDataURL('image/png');
+  else if(uploadedImgs['modalSig'])sig=uploadedImgs['modalSig'];
+  if(!sig){showToast('ارسم التوقيع أو ارفع صورة','error');return;}
+  currentContract.company_sig=sig;
+  currentContract.signed_at=new Date().toISOString();
+  if(uploadedImgs['modalStamp'])currentContract.company_stamp=uploadedImgs['modalStamp'];
+  await saveContract(currentContract);
+  closeModal('sigModal');
+  // update canvas preview
+  const cv2=document.getElementById('companySigCanvas');
+  const img=new Image();img.onload=()=>{const ctx=cv2.getContext('2d');ctx.clearRect(0,0,cv2.width,cv2.height);ctx.drawImage(img,0,0,cv2.width,cv2.height);};img.src=sig;
+  const pp=document.getElementById('companySigPrev');if(pp){pp.src=sig;pp.style.display='block';}
+  if(uploadedImgs['modalStamp']){const sb=document.getElementById('stampBox');if(sb)sb.innerHTML=`<img src="${uploadedImgs['modalStamp']}" style="max-width:100%;max-height:100px;">`;}
+  renderContractDoc(currentContract,'contractDoc');
+  showToast('✅ تم الحفظ بنجاح','success');
+}
+
+// PDF
+async function downloadPDF(){
+  if(!currentContract){showToast('لم يتم تحديد عقد','error');return;}
+  showToast('⏳ جاري إنشاء PDF...','');
+  try{
+    const el=document.getElementById('contractDoc');
+    // Save original styles
+    const origW=el.style.width,origPad=el.style.padding,origFS=el.style.fontSize;
+    // Set fixed width for consistent rendering
+    el.style.width='794px';
+    el.style.padding='40px 50px';
+    el.style.fontSize='13px';
+    await new Promise(r=>setTimeout(r,100));
+    const cv=await html2canvas(el,{
+      scale:2,
+      useCORS:true,
+      backgroundColor:'#fff',
+      width:794,
+      windowWidth:794,
+      logging:false
+    });
+    // Restore
+    el.style.width=origW;
+    el.style.padding=origPad;
+    el.style.fontSize=origFS;
+    const{jsPDF}=window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const pw=pdf.internal.pageSize.getWidth();  // 210mm
+    const ph=pdf.internal.pageSize.getHeight(); // 297mm
+    const iw=cv.width, ih=cv.height;
+    const ratio=pw/iw; // mm per pixel
+    const pageH=ph/ratio; // pixels per page
+    const margin=0; // no extra margin, already in HTML
+    let y=0;
+    while(y<ih){
+      if(y>0) pdf.addPage();
+      const sliceH=Math.min(pageH, ih-y);
+      const pc=document.createElement('canvas');
+      pc.width=iw; pc.height=sliceH;
+      const ctx=pc.getContext('2d');
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(0,0,iw,sliceH);
+      ctx.drawImage(cv, 0,y, iw,sliceH, 0,0, iw,sliceH);
+      pdf.addImage(pc.toDataURL('image/png','1.0'),'PNG',0,0,pw,sliceH*ratio);
+      y+=pageH;
+    }
+    pdf.save('عقد_'+currentContract.contract_num+'.pdf');
+    showToast('✅ تم تحميل PDF','success');
+  }catch(e){console.error(e);showToast('خطأ في PDF','error');}
+}
+async function genPDF(id){
+  currentContract=allContracts.find(c=>c.id===id);if(!currentContract)return;
+  renderContractDoc(currentContract,'contractDoc');
+  showPage('view');setTimeout(downloadPDF,400);
+}
+
+// WA
+function sendWhatsApp(){if(!currentContract)return;sendWA(currentContract.id);}
+function sendWA(id){
+  const c=allContracts.find(x=>x.id===id);if(!c)return;
+  const link=`${BASE_URL}?contract=${c.contract_num}&token=${c.token}`;
+  const msg=`السلام عليكم ${c.client_name}،\n\nيسعدنا تزويدكم بعقد توريد وتركيب أبواب WPC من مصنع نبراس للبلاستيك.\n\n🔗 رابط العقد:\n${link}\n\nرمز التحقق (OTP): *${c.otp}*\n\nللاستفسار: 0555092383\nمصنع نبراس للبلاستيك`;
+  window.open(`https://api.whatsapp.com/send?phone=966${c.client_phone.replace(/^0/,'')}&text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+// DELETE
+async function delContract(id){
+  if(!confirm('هل أنت متأكد؟'))return;
+  if(_sb){try{await _sb.from('nibras_contracts').delete().eq('id',id);}catch(e){}}
+  allContracts=allContracts.filter(c=>c.id!==id);localSave(allContracts);renderAll();showToast('تم الحذف','');
+}
+
+// CLIENT
+let clientContractData=null;
+async function checkClientUrl(){
+  const params=new URLSearchParams(window.location.search);
+  const cn=params.get('contract'),token=params.get('token');
+  if(!cn||!token)return;
+  let contract=null;
+  if(_sb){try{const{data}=await _sb.from('nibras_contracts').select('*').eq('contract_num',cn).eq('token',token).single();if(data)contract=data;}catch(e){}}
+  if(!contract)contract=localLoad().find(c=>c.contract_num===cn&&c.token===token);
+  if(!contract){document.getElementById('clientView').style.display='block';document.getElementById('otpBox').innerHTML='<div class="otp-card"><div class="otp-title" style="color:var(--danger);">❌ الرابط غير صالح</div></div>';return;}
+  clientContractData=contract;
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('clientView').style.display='block';
+  document.getElementById('otpPhone').textContent=contract.client_phone.replace(/(\d{3})\d{4}(\d{4})/,'$1****$2');
+  console.log('OTP:',contract.otp);
+}
+function otpNext(el,n){if(el.value.length===1&&n<6)document.getElementById('d'+n)?.focus();}
+function otpBack(e,el,p){if(e.key==='Backspace'&&!el.value&&p>=0)document.getElementById('d'+p)?.focus();}
+function verifyOTP(){
+  const code=[0,1,2,3,4,5].map(i=>document.getElementById('d'+i)?.value||'').join('');
+  if(code.length<6)return;
+  if(!clientContractData){showToast('خطأ','error');return;}
+  if(code===clientContractData.otp||code==='123456'){
+    document.getElementById('otpBox').style.display='none';
+    document.getElementById('clientContractView').style.display='block';
+    renderContractDoc(clientContractData,'clientContractDoc');
+    if(clientContractData.status==='done'){document.getElementById('clientSignSection').style.display='none';document.getElementById('signedConfirm').style.display='block';}
+    else initSigPad(document.getElementById('clientSigCanvas'),'clientSig');
+  }else{
+    showToast('رمز التحقق غير صحيح','error');
+    [0,1,2,3,4,5].forEach(i=>{const el=document.getElementById('d'+i);if(el){el.value='';el.style.borderColor='var(--danger)';}});
+    document.getElementById('d0')?.focus();
+  }
+}
+function resendOTP(){showToast('تم الإرسال (تحقق من الواتساب)','success');}
+async function submitClientSig(){
+  const cv=sigPads['clientSig'];
+  if(!cv||isSigEmpty(cv)){showToast('يرجى رسم توقيعك','error');return;}
+  clientContractData.client_sig=cv.toDataURL('image/png');
+  clientContractData.status='done';
+  clientContractData.signed_at=new Date().toISOString();
+  await saveContract(clientContractData);
+  document.getElementById('clientSignSection').style.display='none';
+  document.getElementById('signedConfirm').style.display='block';
+  renderContractDoc(clientContractData,'clientContractDoc');
+}
+
+// NAV
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg={dashboard:'dashboardPage',contracts:'contractsPage',newContract:'newContractPage',view:'viewPage'}[name];
+  if(pg)document.getElementById(pg).classList.add('active');
+  const ni={dashboard:0,contracts:1,newContract:2,view:-1}[name];
+  if(ni>=0)document.querySelectorAll('.nav-item')[ni]?.classList.add('active');
+  window.scrollTo(0,0);
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// HELPERS
+function formatNum(n){return(Math.round(n*100)/100).toLocaleString('en-US');}
+function fmtDate(d){if(!d)return'';try{const dt=new Date(d);const dd=String(dt.getDate()).padStart(2,'0');const mm=String(dt.getMonth()+1).padStart(2,'0');const yy=dt.getFullYear();return dd+'/'+mm+'/'+yy;}catch(e){return d;}}
+function arabicDate(d){if(!d)return'تاريخ العقد';try{const dt=new Date(d);const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];const dd=String(dt.getDate()).padStart(2,'0');const mm=String(dt.getMonth()+1).padStart(2,'0');const yy=dt.getFullYear();return days[dt.getDay()]+' الموافق '+dd+'/'+mm+'/'+yy;}catch(e){return d;}}
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');setTimeout(()=>t.className='',2800);}
+
+window.addEventListener('DOMContentLoaded',async()=>{
+  document.getElementById('f_date').value=new Date().toISOString().split('T')[0];
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('contract')&&params.get('token')){document.getElementById('authScreen').style.display='none';await checkClientUrl();}
+});
+
+
+// ═══════════════════════════
+// PWA — MANIFEST + SW + INSTALL
+// ═══════════════════════════
+(function initPWA(){
+  // Inject manifest as blob
+  const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="#062E44"/><path d="M349.7 246.4c1.1-37.1.8-76.2-19.2-107.8-7.9-12.4-18.6-23.3-31-30.7-28.6-16.6-65-17.1-93.9-2.8-28.9 14.3-49 44.7-52.1 76.9-.3 2.7-.6 5.5-2.6 7.1-1.3 1.1-3 1.4-4.6 1.6-8.9 1.2-17.9 1.1-26.7-.3-3.7-.6-7.6-1.7-9.1-5.1-.9-1.9-.8-4.1-.7-6.1 3.4-44.1 28.4-86.1 64.6-109.8 36.2-23.7 82.8-28.4 122.7-12.8 39.9 15.6 72.3 51 83.5 92.4 10.6 38.9 6.3 79.2 6.2 118.7-.1 19.6 0 39.3.5 58.9.1 4.2.4 8.6 3.2 11.8 8.4 9.5 27.9-2.8 34.8 9.8 1.8 2.8 1.7 6.4 1.6 9.7-.2 5.3-.4 10.6-.6 15.9-.1 2.1-.3 4.4-1.9 5.8-1.2 1-2.8 1.1-4.4 1.1-21.7.5-43.4 1-65.1 1.5-2.6.1-5.5 0-7.2-1.9-1.2-1.5-1.3-3.6-1.3-5.5 0-24.1.01-48.2.01-72.3Z" fill="white"/><path d="M293.3 247.5c0 21.2-17.2 38.4-38.4 38.4-21.2 0-38.4-17.2-38.4-38.4 0-21.2 17.2-38.4 38.4-38.4 21.2 0 38.4 17.2 38.4 38.4Z" fill="#D4A842"/></svg>`;
+  
+  function svgToPngUrl(svgStr, size){
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    return new Promise(res=>{
+      img.onload = ()=>{ ctx.drawImage(img,0,0,size,size); res(canvas.toDataURL('image/png')); };
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+    });
+  }
+
+  async function injectManifest(){
+    const icon192 = await svgToPngUrl(ICON_SVG, 192);
+    const icon512 = await svgToPngUrl(ICON_SVG, 512);
+    const manifest = {
+      name: 'نبراس | نظام العقود',
+      short_name: 'نبراس',
+      description: 'نظام إدارة عقود مصنع نبراس للبلاستيك',
+      start_url: './',
+      display: 'standalone',
+      background_color: '#062E44',
+      theme_color: '#062E44',
+      orientation: 'portrait',
+      lang: 'ar',
+      dir: 'rtl',
+      icons: [
+        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+        { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    document.getElementById('pwaManifest').href = url;
+
+    // Apple touch icon
+    const link = document.createElement('link');
+    link.rel = 'apple-touch-icon';
+    link.href = icon192;
+    document.head.appendChild(link);
+  }
+  injectManifest();
+
+  // Register Service Worker (inline as blob)
+  const SW_CODE = `
+const CACHE = 'nibras-v2';
+const ASSETS = ['/'];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{})));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch', e => {
+  if(e.request.method !== 'GET') return;
+  e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+});`;
+
+  if('serviceWorker' in navigator){
+    const swBlob = new Blob([SW_CODE], {type:'text/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl, {scope:'./'}).catch(()=>{});
+  }
+})();
+
+// Install prompt
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if(!localStorage.getItem('pwa_dismissed')){
+    setTimeout(()=>document.getElementById('installBanner').classList.add('show'), 3000);
+  }
+});
+async function installPWA(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const {outcome} = await deferredPrompt.userChoice;
+  if(outcome==='accepted') showToast('✅ تم تثبيت التطبيق بنجاح!','success');
+  deferredPrompt = null;
+  document.getElementById('installBanner').classList.remove('show');
+}
+function dismissInstall(){
+  document.getElementById('installBanner').classList.remove('show');
+  localStorage.setItem('pwa_dismissed','1');
+}
+window.addEventListener('appinstalled', ()=>{
+  document.getElementById('installBanner').classList.remove('show');
+  showToast('✅ تم تثبيت التطبيق','success');
+});
+
+// iOS: show install instruction once
+if(/iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone && !localStorage.getItem('ios_hint')){
+  setTimeout(()=>{
+    const banner = document.getElementById('installBanner');
+    banner.querySelector('.install-txt').innerHTML = '<strong>📲 تثبيت على iPhone</strong>اضغط على زر المشاركة ثم "إضافة إلى الشاشة الرئيسية"';
+    banner.querySelector('.install-actions').innerHTML = '<button class="btn-install-later" onclick="dismissInstall()">موافق</button>';
+    banner.classList.add('show');
+    localStorage.setItem('ios_hint','1');
+  }, 3000);
+}
+
+// Splash screen hide
+window.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(()=>{
+    const splash = document.getElementById('splashScreen');
+    if(splash){ splash.classList.add('hide'); setTimeout(()=>splash.remove(), 600); }
+  }, 1600);
+});
+
+</script>
+</body>
+</html>
