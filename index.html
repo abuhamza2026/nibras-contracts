@@ -630,7 +630,14 @@ async function loadContracts(){
   allContracts=localLoad();renderAll();
 }
 async function saveContract(c){
-  if(_sb){try{const{data,error}=await _sb.from('nibras_contracts').upsert([c]).select();if(!error&&data)return data[0];}catch(e){}}
+  if(_sb){
+    try{
+      const{data,error}=await _sb.from('nibras_contracts').upsert([c]).select();
+      if(error){console.error('Supabase save error:',error);showToast('⚠️ خطأ حفظ: '+error.message,'error');}
+      else if(data){console.log('Saved to Supabase:',data[0]?.contract_num);return data[0];}
+    }catch(e){console.error('Supabase exception:',e);}
+  }
+  console.warn('Falling back to localStorage');
   const i=allContracts.findIndex(x=>x.id===c.id);
   if(i>=0)allContracts[i]=c;else allContracts.unshift(c);
   localSave(allContracts);return c;
@@ -971,8 +978,19 @@ async function checkClientUrl(){
   const cn=params.get('contract'),token=params.get('token');
   if(!cn||!token)return;
   let contract=null;
-  if(_sb){try{const{data}=await _sb.from('nibras_contracts').select('*').eq('contract_num',cn).eq('token',token).single();if(data)contract=data;}catch(e){}}
-  if(!contract)contract=localLoad().find(c=>c.contract_num===cn&&c.token===token);
+  if(_sb){
+    try{
+      const{data,error}=await _sb.from('nibras_contracts').select('*').eq('contract_num',cn).eq('token',token).single();
+      if(error){console.error('Supabase fetch error:',error);}
+      else if(data){contract=data;console.log('Contract loaded from Supabase:',cn);}
+    }catch(e){console.error('Supabase exception:',e);}
+  }
+  if(!contract){
+    console.warn('Trying localStorage for contract:',cn);
+    contract=localLoad().find(c=>c.contract_num===cn&&c.token===token);
+    if(contract)console.log('Found in localStorage');
+    else console.error('Contract not found anywhere for num:',cn);
+  }
   if(!contract){document.getElementById('clientView').style.display='block';document.getElementById('otpBox').innerHTML='<div class="otp-card"><div class="otp-title" style="color:var(--danger);">❌ الرابط غير صالح</div></div>';return;}
   clientContractData=contract;
   document.getElementById('authScreen').style.display='none';
@@ -1031,6 +1049,14 @@ function showToast(msg,type=''){const t=document.getElementById('toast');t.textC
 
 window.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('f_date').value=new Date().toISOString().split('T')[0];
+  // Test Supabase connection
+  if(_sb){
+    try{
+      const{error}=await _sb.from('nibras_contracts').select('id').limit(1);
+      if(error){console.error('Supabase connection test failed:',error);showToast('⚠️ تحقق من إعدادات Supabase','error');}
+      else console.log('✅ Supabase connected');
+    }catch(e){console.error('Supabase init error:',e);}
+  }
   const params=new URLSearchParams(window.location.search);
   if(params.get('contract')&&params.get('token')){document.getElementById('authScreen').style.display='none';await checkClientUrl();}
 });
